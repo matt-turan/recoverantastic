@@ -67,10 +67,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <SidebarMenuItem key={item.label}>
                 <SidebarMenuButton
                   asChild
-                  isActive={pathname.startsWith(item.href)}
+                  isActive={pathname === item.href}
                   tooltip={item.label}
                 >
-                  <Link href="#">
+                  <Link href={item.href}>
                     <item.icon />
                     <span>{item.label}</span>
                   </Link>
