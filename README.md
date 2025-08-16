@@ -1,5 +1,5 @@
-# Firebase Studio
+# Recoverantastic
 
-This is a NextJS starter in Firebase Studio.
+This is a Next.js application called Recoverantastic, built with Firebase Studio.
 
-To get started, take a look at src/app/page.tsx.
+To get started, take a look at `src/app/page.tsx`.
