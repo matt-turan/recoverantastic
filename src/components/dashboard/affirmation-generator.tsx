@@ -1,7 +1,8 @@
 'use client';
 
 import { getAffirmation } from '@/lib/actions';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useActionState } from 'react';
 import { Button } from '../ui/button';
 import {
   Card,
@@ -37,7 +38,7 @@ function SubmitButton() {
 }
 
 export function AffirmationGenerator() {
-  const [state, formAction] = useFormState(getAffirmation, initialState);
+  const [state, formAction] = useActionState(getAffirmation, initialState);
 
   return (
     <Card>
