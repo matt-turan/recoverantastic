@@ -1,4 +1,4 @@
 import { config } from 'dotenv';
 config();
 
-// import '@/ai/flows/generate-affirmation.ts'; // This will be removed
+import '@/ai/flows/generate-journal-prompt';

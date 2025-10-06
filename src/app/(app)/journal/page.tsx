@@ -1,4 +1,7 @@
 // src/app/journal/page.tsx
+'use client';
+
+import { generateJournalPrompt } from '@/ai/flows/generate-journal-prompt';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -8,13 +11,48 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { BookHeart } from 'lucide-react';
+import { BookHeart, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { Label } from '@/components/ui/label';
+
+const moods = ['Anxious', 'Grateful', 'Overwhelmed', 'Hopeful', 'Numb', 'Sad'];
 
 export default function JournalPage() {
-  // Mock data for now. In the future, this would come from a database.
+  const { toast } = useToast();
+  const [selectedMood, setSelectedMood] = useState<string | null>(null);
+  const [generatedPrompt, setGeneratedPrompt] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [entryContent, setEntryContent] = useState('');
+
+  const handleMoodSelect = async (mood: string) => {
+    setSelectedMood(mood);
+    setIsLoading(true);
+    setGeneratedPrompt(null);
+    try {
+      const { prompt } = await generateJournalPrompt({ mood });
+      setGeneratedPrompt(prompt);
+    } catch (error) {
+      console.error('Error generating prompt:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description:
+          'There was an issue generating your journal prompt. Please try again.',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleReset = () => {
+    setSelectedMood(null);
+    setGeneratedPrompt(null);
+    setEntryContent('');
+  };
+
+  // Mock data for now.
   const journalEntries = [
     {
       id: 1,
@@ -46,25 +84,55 @@ export default function JournalPage() {
             <CardHeader>
               <CardTitle>New Entry</CardTitle>
               <CardDescription>
-                What&apos;s on your mind today?
+                {!selectedMood
+                  ? "How are you feeling right now?"
+                  : "Here's a prompt to get you started."}
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Title</Label>
-                <Input id="title" placeholder="e.g., 'A moment of clarity'" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="content">Today&apos;s Thoughts</Label>
-                <Textarea
-                  id="content"
-                  placeholder="Write about your day, your feelings, or anything that comes to mind."
-                  className="min-h-[200px]"
-                />
-              </div>
+            <CardContent className="space-y-4 min-h-[280px]">
+              {!selectedMood ? (
+                <div className="flex flex-wrap gap-2">
+                  {moods.map((mood) => (
+                    <Button
+                      key={mood}
+                      variant="outline"
+                      onClick={() => handleMoodSelect(mood)}
+                    >
+                      {mood}
+                    </Button>
+                  ))}
+                </div>
+              ) : isLoading ? (
+                <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                  <Loader2 className="animate-spin" />
+                  <span>Generating your prompt...</span>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Your Prompt</Label>
+                    <p className="font-semibold text-lg p-4 bg-muted/50 rounded-md">
+                      {generatedPrompt}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="content">Your Thoughts</Label>
+                    <Textarea
+                      id="content"
+                      value={entryContent}
+                      onChange={(e) => setEntryContent(e.target.value)}
+                      placeholder="Write about your day, your feelings, or anything that comes to mind."
+                      className="min-h-[150px]"
+                    />
+                  </div>
+                </div>
+              )}
             </CardContent>
-            <CardFooter>
-              <Button>Save Entry</Button>
+            <CardFooter className="flex justify-between">
+              <Button disabled={!generatedPrompt}>Save Entry</Button>
+              {(generatedPrompt || isLoading) && (
+                 <Button variant="ghost" onClick={handleReset} disabled={isLoading}>Start Over</Button>
+              )}
             </CardFooter>
           </Card>
         </div>
