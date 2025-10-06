@@ -14,7 +14,7 @@ export default function DashboardPage() {
       <WelcomeHeader />
       <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <AffirmationGenerator />
+          {/* The AffirmationGenerator component will be removed from here */}
         </div>
         <div className="space-y-8">
           <NotificationsToggle />
