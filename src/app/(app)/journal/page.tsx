@@ -13,9 +13,14 @@ import {
 } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { BookHeart, Loader2 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
+import {
+  saveJournalEntry,
+  getJournalEntries,
+  type JournalEntry,
+} from '@/lib/actions';
 
 const moods = ['Anxious', 'Grateful', 'Overwhelmed', 'Hopeful', 'Numb', 'Sad'];
 
@@ -24,7 +29,30 @@ export default function JournalPage() {
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [generatedPrompt, setGeneratedPrompt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [entryContent, setEntryContent] = useState('');
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
+  const [isLoadingEntries, setIsLoadingEntries] = useState(true);
+
+  useEffect(() => {
+    const fetchEntries = async () => {
+      setIsLoadingEntries(true);
+      try {
+        const entries = await getJournalEntries();
+        setJournalEntries(entries);
+      } catch (error) {
+        console.error('Error fetching journal entries:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Could not load past journal entries.',
+        });
+      } finally {
+        setIsLoadingEntries(false);
+      }
+    };
+    fetchEntries();
+  }, [toast]);
 
   const handleMoodSelect = async (mood: string) => {
     setSelectedMood(mood);
@@ -46,27 +74,35 @@ export default function JournalPage() {
     }
   };
 
+  const handleSaveEntry = async () => {
+    if (!generatedPrompt || !entryContent) return;
+    setIsSaving(true);
+    try {
+      const newEntry: Omit<JournalEntry, 'id' | 'date'> = {
+        prompt: generatedPrompt,
+        content: entryContent,
+        mood: selectedMood || 'General',
+      };
+      const savedEntry = await saveJournalEntry(newEntry);
+      setJournalEntries([savedEntry, ...journalEntries]);
+      handleReset();
+    } catch (error) {
+      console.error('Error saving entry:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Your entry could not be saved. Please try again.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleReset = () => {
     setSelectedMood(null);
     setGeneratedPrompt(null);
     setEntryContent('');
   };
-
-  // Mock data for now.
-  const journalEntries = [
-    {
-      id: 1,
-      title: 'A Good Day',
-      date: 'July 26, 2024',
-      excerpt: 'Today was a good day. I felt strong and managed to...',
-    },
-    {
-      id: 2,
-      title: 'A Small Victory',
-      date: 'July 25, 2024',
-      excerpt: 'I practiced deep breathing when I felt overwhelmed...',
-    },
-  ];
 
   return (
     <div className="flex-1 space-y-8 p-4 pt-6 md:p-8">
@@ -85,11 +121,11 @@ export default function JournalPage() {
               <CardTitle>New Entry</CardTitle>
               <CardDescription>
                 {!selectedMood
-                  ? "How are you feeling right now?"
+                  ? 'How are you feeling right now?'
                   : "Here's a prompt to get you started."}
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4 min-h-[280px]">
+            <CardContent className="space-y-4 min-h-[350px]">
               {!selectedMood ? (
                 <div className="flex flex-wrap gap-2">
                   {moods.map((mood) => (
@@ -129,9 +165,21 @@ export default function JournalPage() {
               )}
             </CardContent>
             <CardFooter className="flex justify-between">
-              <Button disabled={!generatedPrompt}>Save Entry</Button>
+              <Button
+                onClick={handleSaveEntry}
+                disabled={!entryContent || isSaving}
+              >
+                {isSaving && <Loader2 className="mr-2 animate-spin" />}
+                Save Entry
+              </Button>
               {(generatedPrompt || isLoading) && (
-                 <Button variant="ghost" onClick={handleReset} disabled={isLoading}>Start Over</Button>
+                <Button
+                  variant="ghost"
+                  onClick={handleReset}
+                  disabled={isLoading || isSaving}
+                >
+                  Start Over
+                </Button>
               )}
             </CardFooter>
           </Card>
@@ -140,23 +188,34 @@ export default function JournalPage() {
           <div className="space-y-4">
             <h3 className="text-2xl font-bold">Past Entries</h3>
             <div className="space-y-4">
-              {journalEntries.map((entry) => (
-                <Card key={entry.id}>
-                  <CardHeader>
-                    <CardTitle>{entry.title}</CardTitle>
-                    <CardDescription>{entry.date}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p>{entry.excerpt}</p>
-                  </CardContent>
-                  <CardFooter>
-                    <Button variant="outline" size="sm">
-                      Read More
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
-              {journalEntries.length === 0 && (
+              {isLoadingEntries ? (
+                <div className="flex items-center justify-center pt-12">
+                  <Loader2 className="animate-spin text-muted-foreground" />
+                </div>
+              ) : journalEntries.length > 0 ? (
+                journalEntries.map((entry) => (
+                  <Card key={entry.id}>
+                    <CardHeader>
+                      <CardTitle>{entry.prompt}</CardTitle>
+                      <CardDescription>
+                        {new Date(entry.date).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="line-clamp-3">{entry.content}</p>
+                    </CardContent>
+                    <CardFooter>
+                      <Button variant="outline" size="sm" disabled>
+                        Read More
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                ))
+              ) : (
                 <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/50 p-12 text-center">
                   <BookHeart className="mx-auto size-12 text-muted-foreground" />
                   <h3 className="mt-4 text-lg font-semibold">No entries yet</h3>
