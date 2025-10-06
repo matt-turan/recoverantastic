@@ -28,6 +28,7 @@ pnpm-debug.log*
 # Local .env files
 .env*.local
 .env
+recoverantastic.code-workspace
 
 # IDE files
 .idea/
