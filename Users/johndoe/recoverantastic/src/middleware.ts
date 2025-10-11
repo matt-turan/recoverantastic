@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/firebase-admin';
 
+export const runtime = 'nodejs';
+
 export async function middleware(request: NextRequest) {
   const sessionCookie = request.cookies.get('fb-session')?.value;
   const { pathname } = request.nextUrl;
