@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
-export async function middleware(request: NextRequest) {
+// This function can be marked `async` if using `await` inside
+export function middleware(request: NextRequest) {
   const sessionCookie = request.cookies.get('fb-session')?.value;
   const { pathname } = request.nextUrl;
 
