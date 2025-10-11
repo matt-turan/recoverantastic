@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
       const sessionCookie = await auth.createSessionCookie(idToken, {
         expiresIn,
       });
-      cookies().set('fb-session', sessionCookie, {
+      (await cookies()).set('fb-session', sessionCookie, {
         maxAge: expiresIn,
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -37,6 +37,6 @@ export async function GET(request: NextRequest) {
 }
 
 export async function DELETE() {
-  cookies().delete('fb-session');
+  (await cookies()).delete('fb-session');
   return NextResponse.json({ status: 'success' }, { status: 200 });
 }

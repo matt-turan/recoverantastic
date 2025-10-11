@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const idToken = authorization.split('Bearer ')[1];
     const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days
 
-    cookies().set('fb-session', idToken, {
+    (await cookies()).set('fb-session', idToken, {
       maxAge: expiresIn,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -23,6 +23,6 @@ export async function GET(request: NextRequest) {
 }
 
 export async function DELETE() {
-  cookies().delete('fb-session');
+  (await cookies()).delete('fb-session');
   return NextResponse.json({ status: 'success' }, { status: 200 });
 }

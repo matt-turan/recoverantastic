@@ -26,9 +26,10 @@ const nextConfig: NextConfig = {
       }
     ],
   },
-  experimental: {
-    serverComponentsExternalPackages: ['firebase-admin'],
-  },
+  serverExternalPackages: ['@acme/ui'],
+  // experimental: {
+  //   serverComponentsExternalPackages: ['firebase-admin'],
+  // },
 };
 // export
 export default nextConfig;
