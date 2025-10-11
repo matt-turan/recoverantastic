@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { BookHeart, Loader2 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import {
@@ -28,15 +28,14 @@ export default function JournalPage() {
   const { toast } = useToast();
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [generatedPrompt, setGeneratedPrompt] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingPrompt, setIsLoadingPrompt] = useState(false);
+  const [isSaving, startSavingTransition] = useTransition();
+  const [isLoadingEntries, startLoadingEntriesTransition] = useTransition();
   const [entryContent, setEntryContent] = useState('');
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
-  const [isLoadingEntries, setIsLoadingEntries] = useState(true);
 
   useEffect(() => {
-    const fetchEntries = async () => {
-      setIsLoadingEntries(true);
+    startLoadingEntriesTransition(async () => {
       try {
         const entries = await getJournalEntries();
         setJournalEntries(entries);
@@ -47,16 +46,13 @@ export default function JournalPage() {
           title: 'Error',
           description: 'Could not load past journal entries.',
         });
-      } finally {
-        setIsLoadingEntries(false);
       }
-    };
-    fetchEntries();
+    });
   }, [toast]);
 
   const handleMoodSelect = async (mood: string) => {
     setSelectedMood(mood);
-    setIsLoading(true);
+    setIsLoadingPrompt(true);
     setGeneratedPrompt(null);
     try {
       const { prompt } = await generateJournalPrompt({ mood });
@@ -70,32 +66,32 @@ export default function JournalPage() {
           'There was an issue generating your journal prompt. Please try again.',
       });
     } finally {
-      setIsLoading(false);
+      setIsLoadingPrompt(false);
     }
   };
 
   const handleSaveEntry = async () => {
     if (!generatedPrompt || !entryContent) return;
-    setIsSaving(true);
-    try {
-      const newEntry: Omit<JournalEntry, 'id' | 'date'> = {
-        prompt: generatedPrompt,
-        content: entryContent,
-        mood: selectedMood || 'General',
-      };
-      const savedEntry = await saveJournalEntry(newEntry);
-      setJournalEntries([savedEntry, ...journalEntries]);
-      handleReset();
-    } catch (error) {
-      console.error('Error saving entry:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Your entry could not be saved. Please try again.',
-      });
-    } finally {
-      setIsSaving(false);
-    }
+    
+    startSavingTransition(async () => {
+      try {
+        const newEntry: Omit<JournalEntry, 'id' | 'date'> = {
+          prompt: generatedPrompt,
+          content: entryContent,
+          mood: selectedMood || 'General',
+        };
+        const savedEntry = await saveJournalEntry(newEntry);
+        setJournalEntries([savedEntry, ...journalEntries]);
+        handleReset();
+      } catch (error) {
+        console.error('Error saving entry:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Your entry could not be saved. Please try again.',
+        });
+      }
+    });
   };
 
   const handleReset = () => {
@@ -138,7 +134,7 @@ export default function JournalPage() {
                     </Button>
                   ))}
                 </div>
-              ) : isLoading ? (
+              ) : isLoadingPrompt ? (
                 <div className="flex items-center justify-center gap-2 text-muted-foreground">
                   <Loader2 className="animate-spin" />
                   <span>Generating your prompt...</span>
@@ -172,11 +168,11 @@ export default function JournalPage() {
                 {isSaving && <Loader2 className="mr-2 animate-spin" />}
                 Save Entry
               </Button>
-              {(generatedPrompt || isLoading) && (
+              {(generatedPrompt || isLoadingPrompt) && (
                 <Button
                   variant="ghost"
                   onClick={handleReset}
-                  disabled={isLoading || isSaving}
+                  disabled={isLoadingPrompt || isSaving}
                 >
                   Start Over
                 </Button>

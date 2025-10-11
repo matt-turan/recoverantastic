@@ -83,7 +83,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex flex-col gap-2 p-2">
             <div className="flex items-center gap-2 rounded-md p-2 hover:bg-sidebar-accent">
               <Avatar className="size-8">
-                <AvatarImage src="https://placehold.co/40x40.png" data-ai-hint="person avatar" />
+                <AvatarImage src="https://picsum.photos/seed/1/40/40" data-ai-hint="person avatar" />
                 <AvatarFallback>U</AvatarFallback>
               </Avatar>
               <div className="flex flex-col text-sm group-data-[collapsible=icon]:hidden">

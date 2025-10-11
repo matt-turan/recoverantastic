@@ -11,6 +11,7 @@ import {
 } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { z } from 'zod';
+import { revalidatePath } from 'next/cache';
 
 // Zod schema for validation
 const JournalEntrySchema = z.object({
@@ -43,6 +44,9 @@ export async function saveJournalEntry(
       date: new Date().toISOString(),
       ...validatedData,
     };
+    
+    revalidatePath('/journal');
+    
     return newEntry;
   } catch (error) {
     console.error('Error adding document: ', error);
@@ -66,7 +70,7 @@ export async function getJournalEntries(): Promise<JournalEntry[]> {
         mood: data.mood,
         prompt: data.prompt,
         content: data.content,
-      };
+      } as JournalEntry;
     });
     return entries;
   } catch (error) {
