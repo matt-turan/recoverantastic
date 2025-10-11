@@ -1,4 +1,3 @@
-// src/app/journal/page.tsx
 'use client';
 
 import { generateJournalPrompt } from '@/ai/flows/generate-journal-prompt';
@@ -83,6 +82,10 @@ export default function JournalPage() {
         const savedEntry = await saveJournalEntry(newEntry);
         setJournalEntries([savedEntry, ...journalEntries]);
         handleReset();
+        toast({
+          title: 'Entry Saved',
+          description: 'Your journal entry has been saved successfully.',
+        });
       } catch (error) {
         console.error('Error saving entry:', error);
         toast({
@@ -135,7 +138,7 @@ export default function JournalPage() {
                   ))}
                 </div>
               ) : isLoadingPrompt ? (
-                <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                <div className="flex items-center justify-center gap-2 text-muted-foreground h-full">
                   <Loader2 className="animate-spin" />
                   <span>Generating your prompt...</span>
                 </div>
