@@ -1,22 +1,10 @@
-export const runtime = 'nodejs';
-
 import { type NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/firebase-admin';
 
 export async function middleware(request: NextRequest) {
   const sessionCookie = request.cookies.get('fb-session')?.value;
   const { pathname } = request.nextUrl;
 
-  let isAuthenticated = false;
-  if (sessionCookie) {
-    try {
-      await auth.verifySessionCookie(sessionCookie, true);
-      isAuthenticated = true;
-    } catch (error) {
-      // Session cookie is invalid.
-      isAuthenticated = false;
-    }
-  }
+  const isAuthenticated = !!sessionCookie;
 
   // If the user is on the auth page but is authenticated, redirect to dashboard
   if (pathname === '/' && isAuthenticated) {
