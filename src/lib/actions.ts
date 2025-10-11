@@ -8,13 +8,16 @@ import {
   query,
   orderBy,
   limit,
+  where,
 } from 'firebase/firestore';
-import { firestore } from '@/lib/firebase';
+import { auth, firestore } from '@/lib/firebase-admin';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
 
 // Zod schema for validation
 const JournalEntrySchema = z.object({
+  userId: z.string(),
   mood: z.string(),
   prompt: z.string(),
   content: z.string().min(1, 'Content cannot be empty.'),
@@ -23,15 +26,36 @@ const JournalEntrySchema = z.object({
 export type JournalEntry = {
   id: string;
   date: string; // ISO string
+  userId: string;
   mood: string;
   prompt: string;
   content: string;
 };
 
+async function getUserId(): Promise<string | null> {
+  const authorization = headers().get('Authorization');
+  if (authorization?.startsWith('Bearer ')) {
+    const idToken = authorization.split('Bearer ')[1];
+    try {
+      const decodedToken = await auth.verifyIdToken(idToken);
+      return decodedToken.uid;
+    } catch (error) {
+      console.error('Error verifying ID token:', error);
+      return null;
+    }
+  }
+  return null;
+}
+
 export async function saveJournalEntry(
   entryData: Omit<JournalEntry, 'id' | 'date'>
 ): Promise<JournalEntry> {
   const validatedData = JournalEntrySchema.parse(entryData);
+  const uid = await getUserId();
+  
+  if (!uid || uid !== validatedData.userId) {
+     throw new Error('User is not authorized to perform this action.');
+  }
 
   try {
     const docRef = await addDoc(collection(firestore, 'journalEntries'), {
@@ -44,9 +68,9 @@ export async function saveJournalEntry(
       date: new Date().toISOString(),
       ...validatedData,
     };
-    
+
     revalidatePath('/journal');
-    
+
     return newEntry;
   } catch (error) {
     console.error('Error adding document: ', error);
@@ -55,11 +79,20 @@ export async function saveJournalEntry(
 }
 
 export async function getJournalEntries(): Promise<JournalEntry[]> {
+  const uid = await getUserId();
+
+  if (!uid) {
+    // Return empty array if no user is authenticated
+    // Or you could throw an error, depending on desired behavior
+    return [];
+  }
+
   try {
     const q = query(
       collection(firestore, 'journalEntries'),
+      where('userId', '==', uid),
       orderBy('createdAt', 'desc'),
-      limit(50) // Let's limit to the 50 most recent entries for now
+      limit(50)
     );
     const querySnapshot = await getDocs(q);
     const entries = querySnapshot.docs.map((doc) => {
@@ -67,6 +100,7 @@ export async function getJournalEntries(): Promise<JournalEntry[]> {
       return {
         id: doc.id,
         date: (data.createdAt as Timestamp).toDate().toISOString(),
+        userId: data.userId,
         mood: data.mood,
         prompt: data.prompt,
         content: data.content,

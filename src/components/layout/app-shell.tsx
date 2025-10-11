@@ -21,10 +21,13 @@ import {
   LogOut,
   Settings,
   Users,
+  Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '../logo';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useUser } from '@/firebase/auth/use-user';
+import { getAuth, signOut } from 'firebase/auth';
 
 const menuItems = [
   {
@@ -51,6 +54,15 @@ const menuItems = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, loading } = useUser();
+
+  const handleSignOut = async () => {
+    const auth = getAuth();
+    await signOut(auth);
+    router.push('/');
+  };
+
   return (
     <SidebarProvider>
       <Sidebar
@@ -82,16 +94,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SidebarFooter>
           <div className="flex flex-col gap-2 p-2">
             <div className="flex items-center gap-2 rounded-md p-2 hover:bg-sidebar-accent">
-              <Avatar className="size-8">
-                <AvatarImage src="https://picsum.photos/seed/1/40/40" data-ai-hint="person avatar" />
-                <AvatarFallback>U</AvatarFallback>
-              </Avatar>
+              {loading ? (
+                <Loader2 className="size-8 animate-spin" />
+              ) : (
+                <Avatar className="size-8">
+                  <AvatarImage src={user?.photoURL || ''} data-ai-hint="person avatar" />
+                  <AvatarFallback>
+                    {user?.isAnonymous
+                      ? 'A'
+                      : user?.displayName?.charAt(0) || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+              )}
               <div className="flex flex-col text-sm group-data-[collapsible=icon]:hidden">
                 <span className="font-semibold text-sidebar-foreground">
-                  User
+                  {loading
+                    ? 'Loading...'
+                    : user?.isAnonymous
+                    ? 'Anonymous User'
+                    : user?.displayName || 'User'}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  user@example.com
+                  {user && !user.isAnonymous && user.email}
                 </span>
               </div>
             </div>
@@ -105,11 +129,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Log Out">
-                  <Link href="/">
-                    <LogOut />
-                    <span>Log Out</span>
-                  </Link>
+                <SidebarMenuButton onClick={handleSignOut} tooltip="Log Out">
+                  <LogOut />
+                  <span>Log Out</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

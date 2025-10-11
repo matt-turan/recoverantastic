@@ -3,18 +3,20 @@
 import { Button } from '@/components/ui/button';
 import {
   Card,
-  CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { HeartHandshake } from 'lucide-react';
-import Link from 'next/link';
+import { HeartHandshake, Loader2 } from 'lucide-react';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInAnonymously,
+} from 'firebase/auth';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -46,77 +48,80 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
 }
 
 export function AuthForm() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState<
+    'google' | 'anonymous' | null
+  >(null);
+
+  const handleGoogleSignIn = async () => {
+    setIsLoading('google');
+    const auth = getAuth();
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+      router.push('/dashboard');
+    } catch (error: any) {
+      console.error(error);
+      toast({
+        variant: 'destructive',
+        title: 'Authentication Failed',
+        description: error.message || 'Could not sign in with Google.',
+      });
+      setIsLoading(null);
+    }
+  };
+
+  const handleAnonymousSignIn = async () => {
+    setIsLoading('anonymous');
+    const auth = getAuth();
+    try {
+      await signInAnonymously(auth);
+      router.push('/dashboard');
+    } catch (error: any) {
+      console.error(error);
+      toast({
+        variant: 'destructive',
+        title: 'Authentication Failed',
+        description: error.message || 'Could not sign in anonymously.',
+      });
+      setIsLoading(null);
+    }
+  };
+
   return (
     <Card className="w-full">
-      <Tabs defaultValue="signin">
-        <CardHeader>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="signin">Sign In</TabsTrigger>
-            <TabsTrigger value="signup">Sign Up</TabsTrigger>
-          </TabsList>
-        </CardHeader>
-        <TabsContent value="signin">
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email-signin">Email</Label>
-              <Input
-                id="email-signin"
-                type="email"
-                placeholder="m@example.com"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password-signin">Password</Label>
-              <Input id="password-signin" type="password" required />
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <Button asChild className="w-full">
-              <Link href="/dashboard">Sign In</Link>
-            </Button>
-            <Separator className="my-2" />
-            <Button variant="outline" className="w-full">
-              <GoogleIcon className="mr-2" />
-              Sign in with Google
-            </Button>
-          </CardFooter>
-        </TabsContent>
-        <TabsContent value="signup">
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email-signup">Email</Label>
-              <Input
-                id="email-signup"
-                type="email"
-                placeholder="m@example.com"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password-signup">Password</Label>
-              <Input id="password-signup" type="password" required />
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <Button asChild className="w-full">
-              <Link href="/dashboard">Create Account</Link>
-            </Button>
-            <Separator className="my-2" />
-            <Button variant="outline" className="w-full">
-              <GoogleIcon className="mr-2" />
-              Sign up with Google
-            </Button>
-          </CardFooter>
-        </TabsContent>
-      </Tabs>
-      <Separator className="mb-4" />
-      <CardFooter>
-        <Button asChild variant="secondary" className="w-full">
-          <Link href="/dashboard">
+      <CardHeader>
+        <h2 className="text-center text-xl font-semibold">Sign In / Sign Up</h2>
+      </CardHeader>
+
+      <CardFooter className="flex flex-col gap-4">
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={handleGoogleSignIn}
+          disabled={!!isLoading}
+        >
+          {isLoading === 'google' ? (
+            <Loader2 className="mr-2 animate-spin" />
+          ) : (
+            <GoogleIcon className="mr-2" />
+          )}
+          Continue with Google
+        </Button>
+        <Separator className="my-2" />
+        <Button
+          variant="secondary"
+          className="w-full"
+          onClick={handleAnonymousSignIn}
+          disabled={!!isLoading}
+        >
+          {isLoading === 'anonymous' ? (
+            <Loader2 className="mr-2 animate-spin" />
+          ) : (
             <HeartHandshake className="mr-2" />
-            Continue Anonymously
-          </Link>
+          )}
+          Continue Anonymously
         </Button>
       </CardFooter>
     </Card>

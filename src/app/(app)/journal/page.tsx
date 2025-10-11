@@ -20,11 +20,16 @@ import {
   getJournalEntries,
   type JournalEntry,
 } from '@/lib/actions';
+import { useUser } from '@/firebase/auth/use-user';
+import { useRouter } from 'next/navigation';
 
 const moods = ['Anxious', 'Grateful', 'Overwhelmed', 'Hopeful', 'Numb', 'Sad'];
 
 export default function JournalPage() {
   const { toast } = useToast();
+  const { user, loading: userLoading } = useUser();
+  const router = useRouter();
+
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [generatedPrompt, setGeneratedPrompt] = useState<string | null>(null);
   const [isLoadingPrompt, setIsLoadingPrompt] = useState(false);
@@ -34,20 +39,28 @@ export default function JournalPage() {
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
 
   useEffect(() => {
-    startLoadingEntriesTransition(async () => {
-      try {
-        const entries = await getJournalEntries();
-        setJournalEntries(entries);
-      } catch (error) {
-        console.error('Error fetching journal entries:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Could not load past journal entries.',
-        });
-      }
-    });
-  }, [toast]);
+    if (!user && !userLoading) {
+      router.push('/');
+    }
+  }, [user, userLoading, router]);
+
+  useEffect(() => {
+    if (user) {
+      startLoadingEntriesTransition(async () => {
+        try {
+          const entries = await getJournalEntries();
+          setJournalEntries(entries);
+        } catch (error) {
+          console.error('Error fetching journal entries:', error);
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Could not load past journal entries.',
+          });
+        }
+      });
+    }
+  }, [user, toast]);
 
   const handleMoodSelect = async (mood: string) => {
     setSelectedMood(mood);
@@ -70,14 +83,15 @@ export default function JournalPage() {
   };
 
   const handleSaveEntry = async () => {
-    if (!generatedPrompt || !entryContent) return;
-    
+    if (!generatedPrompt || !entryContent || !user) return;
+
     startSavingTransition(async () => {
       try {
         const newEntry: Omit<JournalEntry, 'id' | 'date'> = {
           prompt: generatedPrompt,
           content: entryContent,
           mood: selectedMood || 'General',
+          userId: user.uid,
         };
         const savedEntry = await saveJournalEntry(newEntry);
         setJournalEntries([savedEntry, ...journalEntries]);
@@ -102,6 +116,14 @@ export default function JournalPage() {
     setGeneratedPrompt(null);
     setEntryContent('');
   };
+  
+  if (userLoading || !user) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <Loader2 className="animate-spin text-primary" size={48} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 space-y-8 p-4 pt-6 md:p-8">
